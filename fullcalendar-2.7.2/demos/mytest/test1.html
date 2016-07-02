@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='utf-8'/>
+    <link href='../../fullcalendar.css' rel='stylesheet'/>
+    <link href='../../fullcalendar.print.css' rel='stylesheet' media='print'/>
+    <script src='../../lib/moment.min.js'></script>
+    <script src='../../lib/jquery.min.js'></script>
+    <script src='../../lib/jquery-ui.custom.min.js'></script>
+    <link rel='stylesheet' href='../../lib/cupertino/jquery-ui.min.css'/>
+    <script src='../../fullcalendar.js'></script>
+    <script src="../../lang/zh-cn.js"></script>
+    <script src="../../lib/template.js"></script>
+    <script>
+        Array.prototype.find = function (key) {//查找
+            var bl = false;
+            for (var i = this.length - 1; i >= 0; i--) {
+                if (this[i].id == key) {
+                    return this[i];
+                }
+            }
+            return bl;
+        };
+        Array.prototype.remove = function (key) {//删除
+            var bl = false;
+            for (var i = this.length - 1; i >= 0; i--) {
+                if (this[i].id == key) {
+                    this.splice(i, 1);
+                    bl = true;
+                }
+            }
+            return bl;
+        };
+        /*******日期格式转化（兼容）*******/
+        function DateParse(dateStr) {
+            if (!dateStr) {
+                return new Date();
+            }
+            var str = dateStr.replace(/-/g, " ").replace(/:/g, " ").replace(/\//g, " ").replace(".", " ").split(" ");
+            // console.log(str);
+            date = new Date(str[0], str[1], str[2], str[3], str[4], str[5], str[6]);
+            return date;
+        }
+        /**
+         * userlist
+         * */
+
+        $(function () {
+            //添加用户列表
+            var userList = $("#userlist");
+            var param = {};
+            var data = $.getJSON('../json/user.json', param, function (data) {
+                $.each(data, function (i, item) {
+                    item.Count = item.list.length || 0;
+                    var list = [];
+                    $.each(item.list, function (index, element) {
+                        element.Data = JSON.stringify({
+                            ID: element.ID,
+                            Type: 1,
+                            DepartmentID: element.DepartID
+                        });
+                        list.push(element.ID);
+                    });
+                    item.Data = JSON.stringify({
+                        ID: item.ID,
+                        Type: 0,
+                        UserList: list
+                    });
+                    var html1 = template("temp_UserList", item);
+                    userList.append(html1);
+                });
+            });
+
+
+            //用户列表点击事件
+            $("#userlist").delegate("li", "click", function (event) {
+                event.stopPropagation();
+                console.log({Type: "Click", Obj: $(this).data("mydata")});
+            });
+            $("#userlist").delegate("li", "dblclick", function (event) {
+                event.stopPropagation();
+                console.log({Type: "DblClick", Obj: $(this).data("mydata")});
+            });
+
+            $("#select_box>#userTab_depart").on("click", function () {
+                toggleUserList(this, 0);
+            });
+            $("#select_box>#userTab_often").on("click", function () {
+                toggleUserList(this, 1);
+            });
+            function toggleUserList(obj, type) {
+
+                $("#select_box>div").removeClass("active");
+                $(obj).addClass("active");
+
+                if (type == 0) {
+                } else {
+                }
+            }
+
+
+            //拖动事件收展
+            $("#wrap").slideUp(2000);
+            $("#newSchedule").hover(function () {
+                $("#wrap").stop().slideDown(800);
+            }, function () {
+                $("#wrap").stop().slideUp(800);
+            });
+            $("#wrap").hover(function () {
+                $("#wrap").stop().slideDown(800);
+            }, function () {
+                $("#wrap").stop().delay(2000).slideUp(800);
+            });
+
+
+        });
+
+        /**
+         * 过滤
+         * */
+        var tab = {
+            arrTabs: [],
+            selectTab: null,
+            createTab: function (id, name, type, color) {
+                var tabObj = {};
+                tabObj.id = id;
+                tabObj.name = name;
+                tabObj.type = type;
+                tabObj.color = color;
+                this.arrTabs.push(tabObj);
+            },
+            changeTab: function (id) {
+                if (this.arrTabs[id]) {
+                    this.selectTab = this.arrTabs[id];
+                }
+                alert(this.selectTab.name);
+            },
+            init: function () {
+                this.createTab(0, 'all', 0, 'blue');
+                this.createTab(1, 'task', 1, 'green');
+                this.createTab(2, 'plan', 2, 'yellow');
+                this.createTab(3, 'meeting', 3, 'purple');
+                this.selectTab = this.arrTabs[0];
+            }
+        };
+        tab.init();
+
+
+        /**
+         * fullcalendar配置
+         * */
+        $(document).ready(function () {
+            $('#calendar').fullCalendar({
+//                events: {
+//                    url: '../json/events.json',
+////                    success: function (data) {
+////console.log(1);
+////                    },
+//                    error: function () {
+//                        alert("data error");
+//                    }
+//                },
+                header: {
+                    left: '',
+                    center: 'title',
+                    right: 'prevYear,nextYear prev,next today month,basicWeek,basicDay,agendaWeek,agendaDay'
+                },
+                defaultDate: new Date(),
+                aspectRatio: 1.5,
+                editable: true,
+                eventLimit: true, // allow "more" link when too many events
+                weekNumbers: true,
+                loading: function (bool) {
+                    $('#loading').toggle(bool);
+                },
+                eventRender: function (calEvent, element, view) {
+                    element.attr("id", calEvent.id);
+                    element.attr("tabindex", "0");
+                    element.attr("role", "button");
+                    element.attr("data-toggle", "popover");
+                    element.attr("data-trigger", "focus");
+                    element.attr("data-content", calEvent.content);
+                    if (calEvent.key == "meeting") {
+                        element.attr("data-original-title", calEvent.title);
+                        element.find("div").prepend('<i class="fa fa-stop font-red-haze"></i>');
+                    }
+                    if (calEvent.key == "outgoing") {
+                        element.attr("data-original-title", calEvent.title);
+                        if (calEvent.typeId == 10) {//请假  element.find("div").prepend('<i class="fa fa-stop font-yellow-crusta"></i>');
+                        } else {
+                            element.find("div").prepend('<i class="fa fa-stop font-blue-steel"></i>');
+                        }
+                    }
+                },
+                eventClick: function (calEvent, jsEvent, view) {
+                    this.dayClick(calEvent, jsEvent, view);
+//                    console.log(calEvent, jsEvent, view);
+//                    try {
+//
+//                       var arr=new Date(Date.parse(calEvent.start));
+//                        alert(arr.getDate());
+//                        $('#calendar').fullCalendar('gotoDate',arr.getFullYear(),arr.getMonth()+1,arr.getDate() );
+//                    }catch (e){console.log(e)}
+                },
+                eventDbClick: function (calEvent, jsEvent, view) {
+//                    console.log(calEvent, jsEvent, view);
+                    $('#calendar').fullCalendar('changeView', "agendaDay");
+                },
+                dayClick: function (dayDate, allDay, jsEvent, view) {
+//alert(dayDate);
+                    // var arr = new Date(Date.parse(dayDate));
+                    //  var arr=dayDate;
+                    //  alert(arr.getDate());
+//                        $('#calendar').fullCalendar('gotoDate',arr.getFullYear(),arr.getMonth()+1,arr.getDate() );
+                },
+                eventMouseover: function (calEvent, jsEvent, view) {
+                    console.log(calEvent);
+                },
+                eventMouseout: function (calEvent, jsEvent, view) {
+                    console.log(calEvent);
+                },
+                selectable: true,
+                select: function (startDate, endDate, allDay, jsEvent, view) {
+                    alert(endDate);
+                    console.log(startDate, endDate, allDay, jsEvent, view);
+                },
+                firstDay: 1,
+                handleWindowResize: true,
+                droppable: true, // 允许在日历控件上拖放
+                drop: function () {
+                    // is the "remove after drop" checkbox checked?
+                    if ($('#drop-remove').is(':checked')) {
+                        // if so, remove the element from the "Draggable Events" list
+                        $(this).remove();
+                    }
+                }
+            });
+            $("#external-events .fc-event").each(function () {//依赖jquery UI
+                var _this = this;
+                // store data so the calendar knows to render an event upon drop
+                $(_this).data('event', {
+                    title: $.trim($(this).text()), // use the element's text as the event title
+                    stick: true // maintain when user navigates (see docs on the renderEvent method)
+                });
+
+                // make the event draggable using jQuery UI
+                $(_this).draggable({
+                    zIndex: 999,
+                    revert: true,      // will cause the event to go back to its
+                    revertDuration: 0  //  original position after the drag
+                });
+            });
+//            $("#calendar").fullCalendar("changeView","today");
+//            $("#calendar .fc-today-button").trigger('click')|| $("#calendar .fc-today-button").triggerHandler('click');
+        });
+
+
+        $(function () {
+            //重置用户列表高属性
+            $("#body").css("max-height", Math.round($("#calendar").css("height").replace("px", "") * 90 / 100) + "px");
+//            $("#calendar").fullCalendar({
+//                events: {
+//                    url: '../json/events.json',
+//                    success: function (data) {
+//console.log(1);
+//                    },
+//                    error: function () {
+//                        alert("data error");
+//                    }
+//                }
+//            });
+
+        });
+    </script>
+    <style>
+        ul {
+            display: inline-table;
+        }
+
+        li {
+            cursor: pointer;
+        }
+
+        #userlist li:hover {
+            background-color: whitesmoke;
+        }
+
+        #userlist > li > ul > li:hover {
+            background-color: #cbf5e6;
+        }
+
+        #userlist li:hover > ul {
+            display: block;
+        }
+
+        #body {
+            border: 1px solid #3baae3;
+            padding: 20px 10px;
+            overflow: scroll;
+        }
+
+        #select_box > input {
+            padding-left: 3px;
+            margin: 0 5%;
+            width: 90%;
+            line-height: 24pt;
+            font-size: 18px;
+            font-family: '微软雅黑', '华文宋体', tahoma, verdana, helvetica;
+        }
+
+        #select_box > div {
+            display: inline-block;
+            width: calc(44% - 5px);
+            background-color: white;
+            margin-top: 10px;
+            margin-bottom: 10px;
+            color: black;
+            cursor: pointer;
+            text-align: center;
+            font-size: 14pt;
+            padding: 5px;
+        }
+
+        #select_box > div:nth-child(2) {
+            margin-left: 5%;
+        }
+
+        #select_box > div:nth-child(3) {
+            margin-right: 5%;
+        }
+
+        #select_box > div.active {
+            background-color: antiquewhite;
+            color: black;
+        }
+
+        .sub_ul {
+            display: none;
+        }
+
+        button:hover, button:focus, button:active {
+            -webkit-transform: scale(1.2);
+            -moz-transform: scale(1.2);
+            -ms-transform: scale(1.2);
+            -o-transform: scale(1.2);
+            transform: scale(1.2);
+            outline-style: none;
+        }
+
+        .border {
+            outline-style: dashed;
+            outline-width: 1px;
+            padding: 3px 5%;
+            display: inline-block;
+            width: auto;
+        }
+
+        .btn {
+            cursor: pointer;
+            padding: 5px 10px;
+            margin: 2px;
+            background-color: white;
+            color: black;
+            font-size: 12pt;
+            font-family: '微软雅黑', '华文宋体', tahoma, verdana, helvetica;
+            border: 1px solid #0000FF;
+        }
+
+        .round {
+            -webkit-border-radius: 5%;
+            -moz-border-radius: 5%;
+            border-radius: 5%;
+        }
+
+        .circle {
+
+            -webkit-border-radius: 100%;
+            -moz-border-radius: 100%;
+            border-radius: 100%;
+        }
+
+        .ground {
+            -webkit-border-radius: 60px;
+            -moz-border-radius: 60px;
+            border-radius: 60px;
+        }
+
+        .circle .icon {
+            word-wrap: break-word;
+            padding: 0 1%;
+
+        }
+
+        .btn.blue {
+            background-color: #3797ff;
+            color: white;
+            border: #3797ff;
+        }
+
+        .btn.red {
+            background-color: #e62014;
+            color: white;
+            border: #e62014;
+        }
+
+        .btn.lightred {
+            background-color: #e6ada2;
+            color: white;
+            border: #e6ada2;
+        }
+
+        .btn.green {
+            background-color: #3BBF67;
+            color: white;
+            border: #3BBF67;
+        }
+
+        .btn.lightgreen {
+            background-color: #cbf5e6;
+            color: white;
+            border: #cbf5e6;
+        }
+
+        .btn.yellow {
+            background-color: #d1e66d;
+            border: #d1e66d;
+        }
+
+        .btn.purple {
+            background-color: #8353e6;
+            color: white;
+            border: #8353e6;
+        }
+
+        .btn.lightpurple {
+            background-color: #c2b1e6;
+            color: white;
+            border: #c2b1e6;
+        }
+
+        .btn.black {
+            background-color: #000000;
+            color: white;
+            border: #000000;
+        }
+
+        .btn.white {
+            background-color: #ffffff;
+            color: black;
+            border: none;
+        }
+
+        body {
+            margin: 40px 10px;
+            padding: 0;
+            font-family: "Lucida Grande", Helvetica, Arial, Verdana, sans-serif;
+            font-size: 14px;
+        }
+
+        #calendar {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        #wrap {
+            width: auto;
+            margin: 0 auto;
+        }
+
+        #external-events {
+            /*float: left;*/
+            width: 80%;
+            padding: 0 10px;
+            border: 1px solid #ccc;
+            background: #FFF;
+            text-align: left;
+            line-height: 24pt;
+        }
+
+        #external-events h4 {
+            font-size: 16px;
+            margin-top: 0;
+            padding-top: 1em;
+        }
+
+        #external-events .fc-event {
+            margin: 10px 0;
+            cursor: pointer;
+            padding: 3px;
+            background-color: #c2b1e6;
+        }
+
+        #external-events p {
+            margin: 1.5em 0;
+            font-size: 11px;
+            color: #ffa643;
+        }
+
+        #external-events p input {
+            margin: 0;
+            vertical-align: middle;
+        }
+
+        #calendar_header {
+
+        }
+
+        #calendar {
+            float: left;
+        }
+
+        #calendar_right {
+            float: right;
+
+        }
+
+        #btnlist {
+            display: inline-flex;
+            list-style: none;
+            position: relative;
+            top: 10%;
+            left: -2%;
+        }
+
+        #btnlist li {
+            padding: 0;
+        }
+
+        #btnlist li button {
+            margin: 0px;
+        }
+
+        .clear {
+            clear: both;
+        }
+    </style>
+</head>
+<body>
+<div id='loading'>loading...</div>
+<div id="content">
+    <div id="calendar_header">
+        <ul id="btnlist">
+            <li>
+                <button id="all" class="btn blue" onclick="tab.changeTab(0);">所有</button>
+            </li>
+            <li>
+                <button id="task" class="btn green" onclick="tab.changeTab(1);">任务</button>
+            </li>
+            <li>
+                <button id="plan" class="btn yellow" onclick="tab.changeTab(2);">计划</button>
+            </li>
+            <li>
+                <button id="meeting" class="btn purple" onclick="tab.changeTab(3);">会议</button>
+            </li>
+        </ul>
+    </div>
+    <div id='calendar'></div>
+    <div id="calendar_right" style="width:20%">
+        <div id="top">
+            <button id="newSchedule" type="button" class="btn blue"><span>+</span>新建日程</button>
+        </div>
+        <div id='wrap'>
+            <div id='external-events'>
+                <h4>拖动添加日程</h4>
+                <div class='fc-event'>新建日程1</div>
+                <div class='fc-event'>新建日程2</div>
+                <div class='fc-event'>新建日程3</div>
+                <div class='fc-event'>新建日程4</div>
+                <div class='fc-event'>新建日程5</div>
+                <p>
+                    <input type='checkbox' id='drop-remove'/>
+                    <label for='drop-remove'>拖动后是否移除</label>
+                </p>
+            </div>
+        </div>
+        <div id="body">
+            <div id="select_box">
+                <input id="select" placeholder="搜索" value=""/>
+                <div id="userTab_depart" class="active">组织架构</div>
+                <div id="userTab_often">经常联系</div>
+            </div>
+            <ul id="userlist" style="list-style: none;display:block; ">
+            </ul>
+            <script type="text/html" id="temp_UserList">
+                <li style="display: block;z-index: 0" data-mydata="{{Data}}">
+                    <div class="btn" style="display: inline-block">{{ID}}-{{Name}}</div>
+                    <div class="name circle" style="display: inline-block"></div>
+                    <div class="btn white circle" style="display: inline-block">{{Count}}</div>
+                    <ul style="list-style: none;" class="sub_ul">
+                        {{each list}}
+                        <li style="display: block;z-index: 1" data-mydata="{{$value.Data}}">
+                            <div class="btn green circle" style="display: inline-block">
+                                {{$value.ID}}-{{$value.RemarkName}}
+                            </div>
+                            <div class="name circle" style="display: inline-block">{{$value.LoginName}}</div>
+                            <div class="name" style="display: inline-block">{{$value.RemarkName}}</div>
+                        </li>
+                        {{/each}}
+                    </ul>
+                </li>
+            </script>
+        </div>
+        <div id="pop"></div>
+    </div>
+    <div class="clear"></div>
+</div>
+
+
+</body>
+</html>

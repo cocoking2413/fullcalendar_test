@@ -1,0 +1,1182 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='utf-8'/>
+    <link href='../../fullcalendar_1.css' rel='stylesheet'/>
+    <link href='../../fullcalendar.print.css' rel='stylesheet' media='print'/>
+    <script src='../../lib/moment.min.js'></script>
+    <script src='../../lib/jquery.min.js'></script>
+    <script src='../../lib/jquery-ui.custom.min.js'></script>
+    <link rel='stylesheet' href='../../lib/cupertino/jquery-ui.min.css'/>
+    <script src='../../fullcalendar_1.js'></script>
+    <script src="../../lang/zh-cn.js"></script>
+    <script src="../../lib/template.js"></script>
+    <script src="../../layer/layer.js"></script>
+    <script>
+        Array.prototype.find = function (key) {//查找
+            var bl = false;
+            for (var i = this.length - 1; i >= 0; i--) {
+                if (this[i].id == key) {
+                    return this[i];
+                }
+            }
+            return bl;
+        };
+        Array.prototype.remove = function (key) {//删除
+            var bl = false;
+            for (var i = this.length - 1; i >= 0; i--) {
+                if (this[i].id == key) {
+                    this.splice(i, 1);
+                    bl = true;
+                }
+            }
+            return bl;
+        };
+        /*******日期格式转化（兼容）*******/
+        function DateParse(dateStr) {
+            if (!dateStr) {
+                return new Date();
+            }
+            var str = dateStr.replace(/-/g, " ").replace(/:/g, " ").replace(/\//g, " ").replace(".", " ").split(" ");
+            // console.log(str);
+            date = new Date(str[0], str[1], str[2], str[3], str[4], str[5], str[6]);
+            return date;
+        }
+
+        //全局数据
+        var obj_datas = {
+            eventType: 0,//事件类型，默认全部事件
+            selectSource: [],//显示数据用户对象
+            hasEdit:true,
+            selectTimeSpan: {start: new Date(), end: new Date()},//选中的日期跨度，默认当天
+            userListAll: [],//所有用户列表
+            oftenUserList: [],//经常使用的用户列表
+            eventsData: [],//所有加载过来的数据
+            selectEventData: [],//当前展示数据源
+
+            other: null
+        };
+
+        /**
+         * userlist
+         * */
+        $(function () {
+                    //添加用户列表
+                    var userList = $("#userlist");
+                    var userlist_often = $("#userlist_often");
+                    var param = {};
+                    var data = $.getJSON('../json/user.json', param, function (data) {
+                        $.each(data, function (i, item) {
+                            item.Count = item.list.length || 0;
+                            var list = [];
+                            $.each(item.list, function (index, element) {
+                                element.Data = JSON.stringify({
+                                    ID: element.ID,
+                                    Type: 1,
+                                    DepartmentID: element.DepartID
+                                });
+                                list.push(element.ID);
+                                obj_datas.userListAll.push(element);
+                                element.LoginName = element.RemarkName.substring(element.RemarkName.length - 1, element.RemarkName.length);
+                                if (index > 7) {
+
+                                    var html0 = template("temp_UserList_Sub", element);
+                                    userlist_often.append(html0);
+                                }
+                            });
+                            item.Data = JSON.stringify({
+                                ID: item.ID,
+                                Type: 0,
+                                UserList: list
+                            });
+                            var html1 = template("temp_UserList", item);
+                            userList.append(html1);
+                        });
+                    });
+
+                    //搜索框
+                    $("#select").on("keyup", function () {
+                        selectChange();
+                    });
+                    $("#select_clear").on("click", function () {
+                        $("#select").val("");
+                        selectChange();
+                    });
+                    //搜索事件处理方法
+                    function selectChange() {
+                        var val = $("#select").val();
+                        layer.msg(val);
+                        if (val && val != "") {
+                            if (!$("#select_clear").hasClass("active"))
+                                $("#select_clear").addClass("active");
+                            //模糊过滤，并重新列表排序显示
+                            var arr = searchFunc(val);
+                            $("#userlist_search").empty();
+                            var userlist_search = $("#userlist_search");
+                            toggleUserList(2)
+                            $.each(arr, function (index, element) {
+                                var html0 = template("temp_UserList_Sub", element);
+                                userlist_search.append(html0);
+                            });
+                        } else {
+                            if ($("#select_clear").hasClass("active"))
+                                $("#select_clear").removeClass("active");
+                            $("#userTab_depart").click();
+                        }
+                    }
+
+                    //检索方法
+                    function searchFunc(key) {
+                        var results = [];
+                        var nPos;
+                        $.each(obj_datas.userListAll, function (index, element) {
+                            if (element.LoginName && typeof(element.LoginName) == 'string' && element.LoginName == key) {
+                                results.push(element);
+                            } else {
+                                var sTxt = element.RemarkName || '';
+                                nPos = fuzzySearch(key, sTxt);
+                                if (nPos >= 0) {
+                                    results.push(element);
+                                }
+                            }
+                        });
+                        return results;
+                    }
+
+                    //模糊匹配
+                    function fuzzySearch(sFind, sObj) {
+                        var nSize = sFind.length;
+                        var nLen = sObj.length;
+                        var sCompare;
+                        if (nSize <= nLen) {
+                            for (var i = 0; i <= nLen - nSize; i++) {
+                                sCompare = sObj.substring(i, i + nSize);
+                                if (sCompare == sFind) {
+                                    return i;
+                                }
+                            }
+                        }
+                        return -1;
+                    }
+
+                    //用户列表点击处理
+                    function dialog_view() {
+                        obj_datas.selectSource = $(this).data("mydata");
+
+                        //fullcalendar数据加载
+
+//                        var content = '\<\div style="padding:20px;">' + JSON.stringify({
+//                                    Type: "Click", "obj_datas.selectSource": obj_datas.selectSource
+//                                }) + '\<\/div>';
+//                        layer.open({
+//                            type: 1,
+//                            area: ['600px', '360px'],
+//                            shadeClose: true, //点击遮罩关闭
+//                            content: content
+//                        });
+                    }
+
+                    //用户列表点击事件
+                    $("#userlist").delegate("li", "click", function (event) {
+                        event.stopPropagation();
+                        console.log({Type: "Click", Obj: $(this).data("mydata")});
+                        dialog_view.call(this);
+                    });
+                    $("#userlist").delegate("li", "dblclick", function (event) {
+                        event.stopPropagation();
+                        console.log({Type: "DblClick", Obj: $(this).data("mydata")});
+                        dialog_view.call(this);
+                    });
+                    $("#userlist_often").delegate("li", "click", function (event) {
+                        event.stopPropagation();
+                        console.log({Type: "Click_userlist_often", Obj: $(this).data("mydata")});
+                        dialog_view.call(this);
+                    });
+                    $("#userlist_often").delegate("li", "dblclick", function (event) {
+                        event.stopPropagation();
+                        console.log({Type: "DblClick_userlist_often", Obj: $(this).data("mydata")});
+                        dialog_view.call(this);
+                    });
+                    $("#userlist_search").delegate("li", "click", function (event) {
+                        event.stopPropagation();
+                        console.log({Type: "Click_userlist_search", Obj: $(this).data("mydata")});
+                        dialog_view.call(this);
+                    });
+                    $("#userlist_search").delegate("li", "dblclick", function (event) {
+                        event.stopPropagation();
+                        console.log({Type: "DblClick_userlist_search", Obj: $(this).data("mydata")});
+                        dialog_view.call(this);
+                    });
+
+                    $("#userTab_depart").on("click", function () {
+                        $("#select_box>ul>li").removeClass("active");
+                        $(this).addClass("active");
+                        toggleUserList(0);
+                    });
+                    $("#userTab_often").on("click", function () {
+                        $("#select_box>ul>li").removeClass("active");
+                        $(this).addClass("active");
+                        toggleUserList(1);
+                    });
+                    function toggleUserList(type) {
+                        if (type == 0 && $("#userlist").css("display") != "block") {//组织架构
+                            $("#userlist_often").css("display", "none");
+                            $("#userlist").css("display", "block");
+                            $("#userlist_search").css("display", "none");
+                        } else if (type == 1 && $("#userlist_often").css("display") != "block") {//最常联系
+                            $("#userlist").css("display", "none");
+                            $("#userlist_often").css("display", "block");
+                            $("#userlist_search").css("display", "none");
+                        }
+                        else if (type == 2 && $("#userlist_search").css("display") != "block") {//搜索结果
+                            $("#userlist").css("display", "none");
+                            $("#userlist_often").css("display", "none");
+                            $("#userlist_search").css("display", "block");
+                        }
+                    }
+
+
+                    //拖动事件收展
+                    $("#wrap").slideUp(2000);
+                    $("#newSchedule").hover(function () {
+                        $("#wrap").stop().slideDown(800);
+                    }, function () {
+                        $("#wrap").stop().slideUp(800);
+                    });
+                    $("#wrap").hover(function () {
+                        $("#wrap").stop().slideDown(800);
+                    }, function () {
+                        $("#wrap").stop().delay(2000).slideUp(800);
+                    });
+
+
+                }
+        );
+
+        /**
+         * Tab切换，数据过滤
+         * */
+        var tab = {
+            arrTabs: [],
+            selectTab: null,
+            createTab: function (id, name, type, color) {
+                var tabObj = {};
+                tabObj.id = id;
+                tabObj.name = name;
+                tabObj.type = type;
+                tabObj.color = color;
+                this.arrTabs.push(tabObj);
+            },
+            changeTab: function (id) {
+                try {
+                    if (this.arrTabs[id]) {
+                        this.selectTab = this.arrTabs[id];
+                        obj_datas.eventType = id;
+                    }
+                } catch (e) {
+                    console.log(e);
+                    this.selectTab = this.arrTabs[0];
+                    obj_datas.eventType = 0;
+                }
+                alert(this.selectTab.name);
+            },
+            init: function () {
+                this.createTab(0, 'all', 0, 'blue');
+                this.createTab(1, 'task', 1, 'green');
+                this.createTab(2, 'plan', 2, 'yellow');
+                this.createTab(3, 'meeting', 3, 'purple');
+                this.selectTab = this.arrTabs[0];
+            },
+            find: function (id) {
+                return this.arrTabs[id] || thia.arrTabs.find(id);
+            }
+        };
+        tab.init();
+
+
+
+        /**
+         * fullcalendar配置
+         * */
+//        $(function () {
+//            /**日程详情***/
+//            var view_details = {
+//                task: function (data) {
+//                    var content = template("temp_task_details", data);
+//                    this.render(content);
+//                },
+//                schedule: function (data) {
+//                    var content = template("temp_task_details", data);
+//                    this.render(content);
+//                },
+//                plan: function (data) {
+//                    var content = template("temp_task_details", data);
+//                    this.render(content);
+//                },
+//                meetting: function (data) {
+//                    var content = template("temp_task_details", data);
+//                    this.render(content);
+//                },
+//                render: function (content) {
+//                    layer.open({
+//                        type: 1,
+//                        area: ['600px'],
+//                        shadeClose: true, //点击遮罩关闭
+//                        content: content,
+//                        shift: 0
+//                    });
+//                }
+//            };
+//
+//            var addEvent;//公用变量，添加事件对象
+//
+//            $('#calendar').fullCalendar({
+//                events: {
+//                    url: '../json/events.json',
+//                    success: function (data) {
+//                        console.log(1);
+//                    },
+//                    error: function () {
+//                        alert("data error");
+//                    },
+//                    catch: true
+//                },
+//                header: {
+//                    left: '',
+//                    center: 'title',
+//                    right: 'prevYear,nextYear prev,next today month,basicWeek,basicDay,agendaWeek,agendaDay'
+//                },
+//                defaultDate: '2016/5/12',
+//                aspectRatio: 1.5,
+//                editable: true,
+//                eventLimit: true, // allow "more" link when too many events
+//                weekNumbers: true,
+//                loading: function (bool) {
+//                    $('#loading').toggle(bool);
+//                },
+//                eventRender: function (calEvent, element, view) {
+//                    element.attr("id", calEvent.id);
+//                    element.attr("tabindex", "0");
+//                    element.attr("role", "button");
+//                    element.attr("data-toggle", "popover");
+//                    element.attr("data-trigger", "focus");
+//                    element.attr("data-content", calEvent.content);
+//                    if (calEvent.key == "meeting") {
+//                        element.attr("data-original-title", calEvent.title);
+//                        element.find("div").prepend('<i class="fa fa-stop font-red-haze"></i>');
+//                    }
+//                    if (calEvent.key == "outgoing") {
+//                        element.attr("data-original-title", calEvent.title);
+//                        if (calEvent.typeId == 10) {//请假  element.find("div").prepend('<i class="fa fa-stop font-yellow-crusta"></i>');
+//                        } else {
+//                            element.find("div").prepend('<i class="fa fa-stop font-blue-steel"></i>');
+//                        }
+//                    }
+//                },
+//                eventClick: function (calEvent, jsEvent, view) {
+//
+//                    var item = {
+//                        ID: 8,
+//                        Code: 'ttttt',
+//                        Title: '日程标题',
+//                        FinishTime: '2016/6/3',
+//                        Content: JSON.stringify(calEvent),
+//                        UserName: '王珂'
+//                    };
+//                    view_details.task(item);
+//                },
+//
+//                eventDbClick: function (calEvent, jsEvent, view) {
+////                    console.log(calEvent, jsEvent, view);
+//                    $('#calendar').fullCalendar('changeView', "agendaDay");
+//                },
+//                dayClick: function (dayDate, allDay, jsEvent, view) {
+//
+//                },
+//                eventMouseover: function (calEvent, jsEvent, view) {
+//                    var that=this;
+//                    addEvent = layer.tips(JSON.stringify(calEvent),that);
+//                },
+//                eventMouseout: function (calEvent, jsEvent, view) {
+//                    layer.close(addEvent);
+//                },
+//                selectable: true,
+//                unselectAuto:false,
+//                select: function (startDate, endDate, allDay, jsEvent, view) {
+//                    obj_datas.selectTimeSpan.start = startDate;
+//                    obj_datas.selectTimeSpan.end = endDate;
+////                    alert(startDate,endDate);
+//                    //  console.log(startDate, endDate, allDay, jsEvent, view);
+//                },
+//                firstDay: 0,
+//                handleWindowResize: true,
+//                droppable: true, // 允许在日历控件上拖放
+//                drop: function () {
+//                    // is the "remove after drop" checkbox checked?
+//                    if ($('#drop-remove').is(':checked')) {
+//                        // if so, remove the element from the "Draggable Events" list
+//                        $(this).remove();
+//                    }
+//                }
+//            });
+//
+////            $(".fc-highlight").delegate(this,"mouseover",function(event){
+////alert(1);
+////            });
+//
+//            $("#external-events .fc-event").each(function () {//依赖jquery UI
+//                var _this = this;
+//                // store data so the calendar knows to render an event upon drop
+//                $(_this).data('event', {
+//                    title: $.trim($(this).text()), // use the element's text as the event title
+//                    stick: true // maintain when user navigates (see docs on the renderEvent method)
+//                });
+//
+//                // make the event draggable using jQuery UI
+//                $(_this).draggable({
+//                    zIndex: 999,
+//                    revert: true,      // will cause the event to go back to its
+//                    revertDuration: 0  //  original position after the drag
+//                });
+//            });
+//
+//        });
+
+        /** 日程**/
+        $(function () {
+            //重置用户列表高属性
+            $("#body").css("max-height", Math.round($("#calendar").css("height").replace("px", "") * 90 / 100) + "px");
+
+            //添加日程
+            $("#newSchedule").on("click", function () {
+                var item = {
+                    ID: 8,
+                    Code: 'ttttt',
+                    Title: '日程标题',
+                    FinishTime: '2016/6/3',
+                    Content: JSON.stringify(obj_datas.selectSource) + '<br/>' + JSON.stringify(obj_datas.selectTimeSpan),
+                    UserName: '王珂'
+                };
+                var content = template("temp_task_edit", item);
+//                console.log(content);
+                layer.open({
+                    type: 1,
+                    area: ['600px'],
+                    shadeClose: true, //点击遮罩关闭
+                    content: content,
+                    btn: ["确认并继续", "确认", "重置", "取消"],
+                    yes: function (index, layero) {//确认并新增
+                        layer.msg('确认并新增:' + index);
+                        return false;
+                    },
+                    btn2: function (index, layero) {//确认
+                        layer.msg('确认:' + index);
+                        return false;
+                    },
+                    btn3: function (index, layero) {//重置
+                        layer.msg('重置:' + index);
+                        return false;
+                    },
+                    cancel: function (index, layero) {//取消
+                        layer.msg('取消:' + index);
+                        return false;
+                    },
+                    shift: 0
+                });
+            });
+
+
+        });
+
+
+    </script>
+    <style>
+        ul {
+            display: inline-table;
+        }
+
+        li {
+            cursor: pointer;
+        }
+
+        #userlist li:hover, #userlist_often li:hover, #userlist_search li:hover {
+            background-color: whitesmoke;
+        }
+
+        #userlist > li > ul > li:hover, #userlist_often > li > ul > li:hover, #userlist_search > li > ul > li:hover {
+            background-color: #cbf5e6;
+        }
+
+        #userlist li:hover > ul, #userlist_often li:hover > ul, #userlist_search li:hover > ul {
+            display: block;
+        }
+
+        #body {
+            border: 1px solid #3baae3;
+            padding: 20px 10px;
+            overflow: scroll;
+        }
+
+        #select_box > input {
+            padding: 2px;
+            padding-left: 3px;
+            margin: 0 5%;
+            width: 90%;
+            line-height: 20pt;
+            height: 24pt;
+            font-size: 18px;
+            font-family: '微软雅黑', '华文宋体', tahoma, verdana, helvetica;
+        }
+
+        #select_box > span.icon {
+            display: none;
+            border: #1641dc 1px solid;
+            padding: 1px 6px;
+            font-size: 16px;
+            position: relative;
+            top: -30px;
+            float: right;
+            left: -15px;
+        }
+
+        #select_box > span.icon:hover {
+            background-color: whitesmoke;
+            border-color: #e62014;
+            color: #e62014;
+            cursor: pointer;
+        }
+
+        #select_box > span.active {
+            display: block;
+        }
+
+        #select_box > ul {
+            list-style: none;
+            padding-left: 3px;
+            margin: 0 5%;
+            width: 90%;
+            line-height: 24pt;
+            font-size: 16px;
+            font-family: '微软雅黑', '华文宋体', tahoma, verdana, helvetica;
+        }
+
+        #select_box > ul > li {
+            display: inline-block;
+            width: calc(44% - 5px);
+            background-color: white;
+            margin-top: 10px;
+            margin-bottom: 10px;
+            color: black;
+            cursor: pointer;
+            text-align: center;
+            /*font-size: 14pt;*/
+            padding: 5px;
+        }
+
+        #select_box > ul > li.active {
+            background-color: antiquewhite;
+            color: black;
+        }
+
+        .sub_ul {
+            display: none;
+        }
+
+        button:hover, button:focus, button:active {
+            -webkit-transform: scale(1.2);
+            -moz-transform: scale(1.2);
+            -ms-transform: scale(1.2);
+            -o-transform: scale(1.2);
+            transform: scale(1.2);
+            outline-style: none;
+        }
+
+        .border {
+            outline-style: dashed;
+            outline-width: 1px;
+            padding: 3px 5%;
+            display: inline-block;
+            width: auto;
+        }
+
+        .btn {
+            cursor: pointer;
+            padding: 5px 10px;
+            margin: 2px;
+            background-color: white;
+            color: black;
+            font-size: 12pt;
+            font-family: '微软雅黑', '华文宋体', tahoma, verdana, helvetica;
+            border: 1px solid #0000FF;
+        }
+
+        .round {
+            -webkit-border-radius: 5%;
+            -moz-border-radius: 5%;
+            border-radius: 5%;
+        }
+
+        .circle {
+
+            -webkit-border-radius: 100%;
+            -moz-border-radius: 100%;
+            border-radius: 100%;
+        }
+
+        .ground {
+            -webkit-border-radius: 60px;
+            -moz-border-radius: 60px;
+            border-radius: 60px;
+        }
+
+        .circle .icon {
+            word-wrap: break-word;
+            padding: 0 1%;
+
+        }
+
+        .btn.blue {
+            background-color: #3797ff;
+            color: white;
+            border: #3797ff;
+        }
+
+        .btn.red {
+            background-color: #e62014;
+            color: white;
+            border: #e62014;
+        }
+
+        .btn.lightred {
+            background-color: #e6ada2;
+            color: white;
+            border: #e6ada2;
+        }
+
+        .btn.green {
+            background-color: #3BBF67;
+            color: white;
+            border: #3BBF67;
+        }
+
+        .btn.lightgreen {
+            background-color: #cbf5e6;
+            color: white;
+            border: #cbf5e6;
+        }
+
+        .btn.yellow {
+            background-color: #d1e66d;
+            border: #d1e66d;
+        }
+
+        .btn.purple {
+            background-color: #8353e6;
+            color: white;
+            border: #8353e6;
+        }
+
+        .btn.lightpurple {
+            background-color: #c2b1e6;
+            color: white;
+            border: #c2b1e6;
+        }
+
+        .btn.black {
+            background-color: #000000;
+            color: white;
+            border: #000000;
+        }
+
+        .btn.white {
+            background-color: #ffffff;
+            color: black;
+            border: none;
+        }
+
+        body {
+            margin: 40px 10px;
+            padding: 0;
+            font-family: "Lucida Grande", Helvetica, Arial, Verdana, sans-serif;
+            font-size: 14px;
+        }
+
+        #calendar {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        #wrap {
+            width: auto;
+            margin: 0 auto;
+        }
+
+        #external-events {
+            /*float: left;*/
+            width: 80%;
+            padding: 0 10px;
+            border: 1px solid #ccc;
+            background: #FFF;
+            text-align: left;
+            line-height: 24pt;
+        }
+
+        #external-events h4 {
+            font-size: 16px;
+            margin-top: 0;
+            padding-top: 1em;
+        }
+
+        #external-events .fc-event {
+            margin: 10px 0;
+            cursor: pointer;
+            padding: 3px;
+            background-color: #c2b1e6;
+        }
+
+        #external-events p {
+            margin: 1.5em 0;
+            font-size: 11px;
+            color: #ffa643;
+        }
+
+        #external-events p input {
+            margin: 0;
+            vertical-align: middle;
+        }
+
+        #calendar_header {
+
+        }
+
+        #calendar {
+            float: left;
+        }
+
+        #calendar_right {
+            float: right;
+
+        }
+
+        #btnlist {
+            display: inline-flex;
+            list-style: none;
+            position: relative;
+            top: 10%;
+            left: -2%;
+        }
+
+        #btnlist li {
+            padding: 0;
+        }
+
+        #btnlist li button {
+            margin: 0px;
+        }
+
+        .clear {
+            clear: both;
+        }
+    </style>
+    <script>
+        /** 当天信息初始化 **/
+        $(function(){
+            var dayDate = new Date();
+            var d = $.fullCalendar.formatDate(dayDate,"dddd");
+            var m = $.fullCalendar.formatDate(dayDate,"yyyy年MM月dd日");
+            var lunarDate = lunar(dayDate);
+            $(".alm_date").html(m + "&nbsp;" + d);
+            $(".today_date").html(dayDate.getDate())
+            $("#alm_cnD").html("农历"+ lunarDate.lMonth + "月" + lunarDate.lDate);
+            $("#alm_cnY").html(lunarDate.gzYear+"年&nbsp;"+lunarDate.gzMonth+"月&nbsp;"+lunarDate.gzDate+"日");
+            $("#alm_cnA").html("【"+lunarDate.animal+"年】");
+            var fes = lunarDate.festival();
+            if(fes.length>0){
+                $(".alm_lunar_date").html($.trim(lunarDate.festival()[0].desc));
+                $(".alm_lunar_date").show();
+            }else{
+                $(".alm_lunar_date").hide();
+            }
+
+        });
+        $(document).ready(function() {
+
+            var date = new Date();
+            var d = date.getDate();
+            var m = date.getMonth();
+            var y = date.getFullYear();
+
+            $('#calendar').fullCalendar({
+                header: {
+                    left: 'prev,next today',
+                    center: 'title',
+                    right: 'month,basicWeek,basicDay'
+                },
+                editable: true,
+                events: [
+                    {
+                        title: 'All Day Event',
+                        start: new Date(y, m, 1)
+                    },
+                    {
+                        title: 'Long Event',
+                        start: new Date(y, m, d-5),
+                        end: new Date(y, m, d-2)
+                    },
+                    {
+                        id: 999,
+                        title: 'Repeating Event',
+                        start: new Date(y, m, d-3, 16, 0),
+                        allDay: false
+                    },
+                    {
+                        id: 999,
+                        title: 'Repeating Event',
+                        start: new Date(y, m, d+4, 16, 0),
+                        allDay: false
+                    },
+                    {
+                        title: 'Meeting',
+                        start: new Date(y, m, d, 10, 30),
+                        allDay: false
+                    },
+                    {
+                        title: 'Lunch',
+                        start: new Date(y, m, d, 12, 0),
+                        end: new Date(y, m, d, 14, 0),
+                        allDay: false
+                    },
+                    {
+                        title: 'Birthday Party',
+                        start: new Date(y, m, d+1, 19, 0),
+                        end: new Date(y, m, d+1, 22, 30),
+                        allDay: false
+                    },
+                    {
+                        title: 'Click for Google',
+                        start: new Date(y, m, 28),
+                        end: new Date(y, m, 29),
+                        url: 'http://google.com/'
+                    }
+                ],
+                dayClick : function(dayDate, allDay, jsEvent, view) { //点击单元格事件
+                    var d = $.fullCalendar.formatDate(dayDate,"dddd");
+                    var m = $.fullCalendar.formatDate(dayDate,"yyyy年MM月dd日");
+                    var lunarDate = lunar(dayDate);
+                    $(".alm_date").html(m + "&nbsp;" + d);
+                    $(".today_date").html(dayDate.getDate())
+                    $("#alm_cnD").html("农历"+ lunarDate.lMonth + "月" + lunarDate.lDate);
+                    $("#alm_cnY").html(lunarDate.gzYear+"年&nbsp;"+lunarDate.gzMonth+"月&nbsp;"+lunarDate.gzDate+"日");
+                    $("#alm_cnA").html("【"+lunarDate.animal+"年】");
+                    var fes = lunarDate.festival();
+                    if(fes.length>0){
+                        $(".alm_lunar_date").html($.trim(lunarDate.festival()[0].desc));
+                        $(".alm_lunar_date").show();
+                    }else{
+                        $(".alm_lunar_date").hide();
+                    }
+                    // 当天则显示“当天”标识
+                    var now = new Date();
+                    if (now.getDate() == dayDate.getDate() && now.getMonth() == dayDate.getMonth() && now.getFullYear() == dayDate.getFullYear()){
+                        $(".today_icon").show();
+                    }else{
+                        $(".today_icon").hide();
+                    }
+                },
+                loading : function(bool) {
+                    if (bool)
+                        $("#msgTopTipWrapper").show();
+                    else
+                        $("#msgTopTipWrapper").fadeOut();
+                }
+            });
+
+        });
+        /** 绑定事件到日期下拉框 **/
+        $(function(){
+            $("#fc-dateSelect").delegate("select","change",function(){
+                var fcsYear = $("#fcs_date_year").val();
+                var fcsMonth = $("#fcs_date_month").val();
+                $("#calendar").fullCalendar('gotoDate', fcsYear, fcsMonth);
+            });
+        });
+    </script>
+    <style>
+
+        body {
+            margin-top: 40px;
+            text-align: center;
+            font-size: 14px;
+            font-family: "Lucida Grande",Helvetica,Arial,Verdana,sans-serif;
+        }
+
+        .dib{display: inline-block;}
+        .fr{float: right;}
+        .calendarWrapper {
+            width: 1190px;
+            margin: 0 auto 15px;
+        }
+
+        #calendar {
+            width: 885px;
+            background: #fff;
+            padding: 15px 10px;
+        }
+
+        .calendarWrapper .rightSidePanel {
+            width: 240px;
+            padding: 0px 15px;
+        }
+    </style>
+</head>
+<body>
+<div id="msgTopTipWrapper" style="display:none">
+    <div id="msgTopTip">
+        <span><i class="iconTip"></i>正在载入日历数据...</span>
+    </div>
+</div>
+<div class="calendarWrapper">
+    <div class="rightSidePanel mb50 fr">
+        <div id="div_day_detail" class="h_calendar_alm">
+            <div class="alm_date"></div>
+            <div class="alm_content nofestival">
+                <div class="today_icon"></div>
+                <div class="today_date"></div>
+                <p id="alm_cnD"></p>
+                <p id="alm_cnY"></p>
+                <p id="alm_cnA"></p>
+                <div class="alm_lunar_date"></div>
+            </div>
+        </div>
+    </div>
+    <div id="calendar" class="dib"></div>
+</div>
+
+
+<!--<div id='loading'>loading...</div>-->
+<!--<div id="content">-->
+    <!--<div id="calendar_header">-->
+        <!--<ul id="btnlist">-->
+            <!--<li>-->
+                <!--<button id="all" class="btn blue" onclick="tab.changeTab(0);">所有</button>-->
+            <!--</li>-->
+            <!--<li>-->
+                <!--<button id="task" class="btn green" onclick="tab.changeTab(1);">任务</button>-->
+            <!--</li>-->
+            <!--<li>-->
+                <!--<button id="plan" class="btn yellow" onclick="tab.changeTab(2);">计划</button>-->
+            <!--</li>-->
+            <!--<li>-->
+                <!--<button id="meeting" class="btn purple" onclick="tab.changeTab(3);">会议</button>-->
+            <!--</li>-->
+        <!--</ul>-->
+    <!--</div>-->
+    <!--<div id='calendar1'></div>-->
+    <!--<div id="calendar_right" style="width:20%">-->
+        <!--<div id="top">-->
+            <!--<button id="newSchedule" type="button" class="btn blue"><span>+</span>新建日程</button>-->
+        <!--</div>-->
+        <!--<div id='wrap'>-->
+            <!--<div id='external-events'>-->
+                <!--<h4>拖动添加日程</h4>-->
+                <!--<div class='fc-event'>新建日程1</div>-->
+                <!--<div class='fc-event'>新建日程2</div>-->
+                <!--<div class='fc-event'>新建日程3</div>-->
+                <!--<div class='fc-event'>新建日程4</div>-->
+                <!--<div class='fc-event'>新建日程5</div>-->
+                <!--<p>-->
+                    <!--<input type='checkbox' id='drop-remove'/>-->
+                    <!--<label for='drop-remove'>拖动后是否移除</label>-->
+                <!--</p>-->
+            <!--</div>-->
+        <!--</div>-->
+        <!--<div id="body">-->
+            <!--<div id="select_box">-->
+                <!--<input id="select" placeholder="搜索" value=""/>-->
+                <!--<span id="select_clear" class="circle icon">×</span>-->
+                <!--<ul>-->
+                    <!--<li id="userTab_depart" class="active">组织架构</li>-->
+                    <!--<li id="userTab_often">经常联系</li>-->
+                <!--</ul>-->
+            <!--</div>-->
+            <!--<ul id="userlist" style="list-style: none;display:block; ">-->
+            <!--</ul>-->
+            <!--<ul id="userlist_often" class="often" style="list-style: none;display:none; ">-->
+            <!--</ul>-->
+            <!--<ul id="userlist_search" class="often" style="list-style: none;display:none;">-->
+            <!--</ul>-->
+            <!--<script type="text/html" id="temp_UserList">-->
+                <!--<li style="display: block;z-index: 0" data-mydata="{{Data}}">-->
+                    <!--<div class="btn" style="display: inline-block">{{ID}}-{{Name}}</div>-->
+                    <!--<div class="name circle" style="display: inline-block"></div>-->
+                    <!--<div class="btn white circle" style="display: inline-block">{{Count}}</div>-->
+                    <!--<ul style="list-style: none;" class="sub_ul">-->
+                        <!--{{each list}}-->
+                        <!--<li style="display: block;z-index: 1" data-mydata="{{$value.Data}}">-->
+                            <!--<div class="btn green circle" style="display: inline-block">-->
+                                <!--{{$value.LoginName}}-->
+                            <!--</div>-->
+                            <!--<div class="name circle" style="display: inline-block">{{$value.ID}}-{{$value.RemarkName}}-->
+                            <!--</div>-->
+                            <!--<div class="name" style="display: inline-block">{{$value.DepartID}}-{{$value.PositionID}}-->
+                            <!--</div>-->
+                        <!--</li>-->
+                        <!--{{/each}}-->
+                    <!--</ul>-->
+                <!--</li>-->
+            <!--</script>-->
+            <!--<script type="text/html" id="temp_UserList_Sub">-->
+                <!--<li style="display: block;z-index: 1" data-mydata="{{Data}}">-->
+                    <!--<div class="btn green circle" style="display: inline-block">-->
+                        <!--{{LoginName}}-->
+                    <!--</div>-->
+                    <!--<div class="name circle" style="display: inline-block"> {{ID}}-{{RemarkName}}</div>-->
+                    <!--<div class="name" style="display: inline-block">{{DepartID}}-{{PositionID}}</div>-->
+                <!--</li>-->
+            <!--</script>-->
+        <!--</div>-->
+        <!--<div id="pop">-->
+            <!--<script type="text/html" id="temp_task_edit">-->
+                <!--<form action="#" method="post" id="form_task" style="padding: 20px;">-->
+                    <!--<div class="control-group">-->
+                        <!--<label for="Code" class="span2 control-label">任务编号：</label>-->
+                        <!--<div class="span9">-->
+                            <!--<input type="text" class="form-control" id="Code" name="Code" readonly="true"-->
+                                   <!--value="{{Code}}">-->
+                        <!--</div>-->
+                    <!--</div>-->
+                    <!--<div class="control-group">-->
+                        <!--<label for="Title" class="span2 control-label"><span style="color:red">*</span>任务标题：</label>-->
+                        <!--<div class="span9">-->
+                            <!--<input type="text" class="form-control" id="Title" name="Title" style="overflow:visible"-->
+                                   <!--size="10" maxlength="50" value="{{Title}}">-->
+                            <!--<span class="help-line" style="color:red;" id="projecttitle"></span>-->
+                        <!--</div>-->
+                    <!--</div>-->
+                    <!--<div class="control-group">-->
+                        <!--<label class="span2 control-label"><span style="color:red">*</span>执行人员：</label>-->
+                        <!--<div class="span9">-->
+                            <!--<button class="btn">{{UserName}}</button>-->
+                        <!--</div>-->
+                    <!--</div>-->
+
+                    <!--<div class="control-group" id="remindt">-->
+
+                        <!--<label class="span2 control-label"><span style="color:red">*</span>计划完成时间：</label>-->
+
+                        <!--<div class="span9 inline">-->
+                            <!--{{FinishTime}}-->
+                        <!--</div>-->
+                    <!--</div>-->
+
+
+                    <!--<div class="control-group">-->
+                        <!--<label for="Content" class="span2 control-label">任务内容：</label>-->
+                        <!--<div class="span9">-->
+                            <!--<textarea name="Content" rows="6" class="form-control">{{Content}}</textarea>-->
+                        <!--</div>-->
+                    <!--</div>-->
+                    <!--<div class="control-group">-->
+                        <!--<label class="span2 control-label">任务附件：</label>-->
+                        <!--<div class="span9">-->
+                            <!--无-->
+                        <!--</div>-->
+                    <!--</div>-->
+
+                <!--</form>-->
+            <!--</script>-->
+            <!--<script type="text/html" id="temp_task_details">-->
+                <!--<div class="control-group">-->
+                    <!--<label for="Code" class="span2 control-label">任务编号：</label>-->
+                    <!--<div class="span9">-->
+                        <!--{{Code}}-->
+                    <!--</div>-->
+                <!--</div>-->
+                <!--<div class="control-group">-->
+                    <!--<label for="Title" class="span2 control-label"><span style="color:red">*</span>任务标题：</label>-->
+                    <!--<div class="span9">-->
+                        <!--{{Title}}-->
+
+                    <!--</div>-->
+                <!--</div>-->
+                <!--<div class="control-group">-->
+                    <!--<label class="span2 control-label"><span style="color:red">*</span>执行人员：</label>-->
+                    <!--<div class="span9">-->
+                        <!--<button class="btn">{{UserName}}</button>-->
+                    <!--</div>-->
+                <!--</div>-->
+
+                <!--<div class="control-group">-->
+
+                    <!--<label class="span2 control-label"><span style="color:red">*</span>计划完成时间：</label>-->
+
+                    <!--<div class="span9 inline">-->
+                        <!--{{FinishTime}}-->
+                    <!--</div>-->
+                <!--</div>-->
+
+
+                <!--<div class="control-group">-->
+                    <!--<label for="Content" class="span2 control-label">任务内容：</label>-->
+                    <!--<div class="span9">-->
+                        <!--{{Content}}-->
+                    <!--</div>-->
+                <!--</div>-->
+                <!--<div class="control-group">-->
+                    <!--<label class="span2 control-label">任务附件：</label>-->
+                    <!--<div class="span9">-->
+                        <!--无-->
+                    <!--</div>-->
+                <!--</div>-->
+
+            <!--</script>-->
+            <!--<script type="text/html" id="temp_schedule">-->
+                <!--<form id="reserveformID" method="post">-->
+                    <!--<div class="sysdesc">-->
+                        <!--&nbsp;</div>-->
+                    <!--<div class="rowElem">-->
+                        <!--<label>-->
+                            <!--标题:</label>-->
+                        <!--<input id="schedule_title" name="start" value="{{Title}}">-->
+                    <!--</div>-->
+                    <!--<div class="rowElem">-->
+                        <!--<label>-->
+                            <!--重要程度:</label>-->
+                        <!--<input id="schedule_chengdu" name="start" value="{{Code}}">-->
+                    <!--</div>-->
+                    <!--<div class="rowElem">-->
+                        <!--<label>-->
+                            <!--开始时间:</label>-->
+                        <!--<input id="schedule_start" name="start" value="{{FinishTime}}">-->
+                    <!--</div>-->
+                    <!--<div class="rowElem">-->
+                        <!--<label>-->
+                            <!--结束时间:</label>-->
+                        <!--<input id="schedule_end" name="end" value="{{FinishTime}}">-->
+                    <!--</div>-->
+                    <!--<div class="rowElem">-->
+                        <!--<label>-->
+                            <!--备忘内容:</label>-->
+                        <!--<textarea id="schedule_details" rows="3" cols="43" name="details">{{Content}}</textarea>-->
+                    <!--</div>-->
+                    <!--<div class="rowElem">-->
+                    <!--</div>-->
+                    <!--<div class="rowElem">-->
+                    <!--</div>-->
+                    <!--<div id="addhelper" class="ui-widget">-->
+                        <!--<div style="padding-bottom: 5px; padding-left: 5px; padding-right: 5px; padding-top: 5px"-->
+                             <!--class="ui-state-error ui-corner-all">-->
+                            <!--<div id="addresult">-->
+                            <!--</div>-->
+                        <!--</div>-->
+                    <!--</div>-->
+                <!--</form>-->
+            <!--</script>-->
+        <!--</div>-->
+    <!--</div>-->
+    <!--<div class="clear"></div>-->
+<!--</div>-->
+
+</body>
+
+</html>
