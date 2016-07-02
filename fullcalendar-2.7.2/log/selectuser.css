@@ -1,0 +1,169 @@
+ul {
+    display: inline-table;
+}
+
+li {
+    cursor: pointer;
+    list-style: none;
+}
+
+#chose_user {
+    width: 96%;
+    height: 450px;
+    padding: 10px;
+}
+
+#left {
+    width: 50%;
+    float: left;
+    display: block;
+    height: 450px;
+    border: 1px solid rgba(96, 191, 122, 0.81);
+    overflow: auto;
+}
+
+#right {
+    width: 40%;
+    float: left;
+    display: block;
+    height: 450px;
+    border: 1px solid rgba(96, 191, 122, 0.81);
+    overflow: auto;
+}
+
+#center {
+    width: 3%;
+    float: left;
+    display: block;
+    height: 450px;
+    vertical-align: middle;
+    position: relative;
+    margin: 0 5px;
+    line-height: 445px;
+}
+
+#userlist_depart li:hover, #userlist_position li:hover, #userlist_role li:hover, #userlist_search li:hover {
+    background-color: whitesmoke;
+}
+
+#userlist_depart > li > ul > li:hover, #userlist_position > li > ul > li:hover, #userlist_role > li > ul > li:hover, #userlist_search > li > ul > li:hover {
+    background-color: #cbf5e6;
+}
+
+#userlist_depart li:hover > ul, #userlist_position li:hover > ul, #userlist_role li:hover > ul, #userlist_search li:hover > ul {
+    display: block;
+}
+
+#userlist_depart li.active, #userlist_position li.active, #userlist_role li.active, #userlist_search li.active {
+    background-color: gainsboro;
+}
+
+#select_box {
+    margin-top: 5px;
+}
+
+    #select_box > input {
+        padding: 2px;
+        padding-left: 3px;
+        margin: 0 5%;
+        width: 90%;
+        line-height: 20pt;
+    }
+
+    #select_box > span.icon {
+        display: none;
+        border: #1641dc 1px solid;
+        padding: 1px 2px;
+        position: relative;
+        top: -28px;
+        float: right;
+        left: -10px;
+    }
+
+        #select_box > span.icon:hover {
+            background-color: whitesmoke;
+            border-color: #e62014;
+            color: #e62014;
+            cursor: pointer;
+        }
+
+    #select_box > span.active {
+     
+    }
+
+    #select_box > ul {
+        list-style: none;
+        padding-left: 3px;
+        margin: 0 5%;
+        width: 90%;
+        font-size: 10px;
+    }
+
+        #select_box > ul > li {
+            display: inline-block;
+            width: 25%;
+            background-color: white;
+            margin-top: 10px;
+            margin-bottom: 10px;
+            color: black;
+            cursor: pointer;
+            text-align: center;
+            padding: 5px;
+        }
+
+            #select_box > ul > li.active {
+                background-color: #5c99fa;
+                color: white;
+            }
+
+.mycircle {
+    -webkit-border-radius: 100%;
+    -moz-border-radius: 100%;
+    border-radius: 100%;
+    border: none;
+}
+
+    .mycircle .icon {
+        word-wrap: break-word;
+        padding: 0 1%;
+    }
+
+#top_btnlist {
+    color: lightseagreen;
+    background-color: rgba(242, 242, 242, 1);
+    display: block;
+    line-height: 24px;
+    padding: 3px;
+    font-size: 12px;
+}
+
+    #top_btnlist > a {
+        color: #2e8ded;
+        float: right;
+        margin-left: 5px;
+        cursor: pointer;
+    }
+
+.userlist {
+    overflow: auto;
+    height: 360px;
+}
+
+#userlist_search {
+    height: 337px;
+}
+
+#select_user {
+    display: block;
+    overflow: auto;
+    height: 418px;
+}
+
+.form-actions {
+    margin: 0;
+    padding: 5px;
+}
+
+.sub_ul {
+    display: none;
+}

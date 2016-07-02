@@ -1,0 +1,422 @@
+﻿
+ul {
+    display: inline-table;
+}
+
+li {
+    cursor: pointer;
+}
+
+#userlist_check li:hover, #userlist_settting li:hover, #userlist_search li:hover {
+    background-color: whitesmoke;
+}
+
+#userlist_check > li > ul > li:hover, #userlist_settting > li > ul > li:hover, #userlist_search > li > ul > li:hover {
+    background-color: #cbf5e6;
+}
+
+#userlist_check li:hover > ul, #userlist_settting li:hover > ul, #userlist_search li:hover > ul {
+    display: block;
+}
+
+#userlist_check li.active, #userlist_settting li.active, #userlist_search li.active {
+    background-color: gainsboro;
+}
+
+#body {
+    border: 1px solid #3baae3;
+    padding: 20px 10px;
+    overflow: scroll;
+}
+
+#select_box > input {
+    padding: 2px;
+    padding-left: 3px;
+    margin: 0 5%;
+    width: 90%;
+    line-height: 20px;
+    height: 24pt;
+    font-size: 18px;
+    font-family: '微软雅黑', '华文宋体', tahoma, verdana, helvetica;
+}
+
+#select_box > span.icon {
+    display: none;
+    border: #1641dc 1px solid;
+    padding: 1px 6px;
+    font-size: 16px;
+    position: relative;
+    top: -30px;
+    float: right;
+    left: -15px;
+}
+
+#select_box > span.icon:hover {
+    background-color: whitesmoke;
+    border-color: #e62014;
+    color: #e62014;
+    cursor: pointer;
+}
+
+#select_box > span.active {
+    display: block;
+}
+
+#select_box > ul {
+    list-style: none;
+    padding-left: 3px;
+    margin: 0 5%;
+    width: 90%;
+    line-height: 24pt;
+    font-size: 16px;
+    font-family: '微软雅黑', '华文宋体', tahoma, verdana, helvetica;
+}
+
+#select_box > ul > li {
+    display: inline-block;
+    width: calc(44% - 5px);
+    background-color: white;
+    margin-top: 10px;
+    margin-bottom: 10px;
+    color: black;
+    cursor: pointer;
+    text-align: center;
+    /*font-size: 14pt;*/
+    padding: 5px;
+}
+
+#select_box > ul > li.active {
+    background-color: antiquewhite;
+    color: black;
+}
+
+#userTab_often > span.icon {
+    display: none;
+    border: #60bf7a 1px solid;
+    padding: 1px 6px;
+    font-size: 16px;
+    position: relative;
+    top: -1px;
+    float: right;
+    left: 5px;
+}
+
+#userTab_often > span.icon:hover {
+    background-color: whitesmoke;
+    border-color: #517fff;
+    color: #8353e6;
+    cursor: pointer;
+}
+
+#userTab_often > span.active {
+    display: inline-block;
+}
+
+.sub_ul {
+    display: none;
+}
+
+button:hover, button:focus, button:active {
+    -webkit-transform: scale(1.2);
+    -moz-transform: scale(1.2);
+    -ms-transform: scale(1.2);
+    -o-transform: scale(1.2);
+    transform: scale(1.2);
+    outline-style: none;
+}
+
+.border {
+    outline-style: dashed;
+    outline-width: 1px;
+    padding: 3px 5%;
+    display: inline-block;
+    width: auto;
+}
+
+.mybtn {
+    cursor: pointer;
+    padding: 5px 10px;
+    margin: 2px;
+    background-color: white;
+    color: black;
+    font-size: 12pt;
+    font-family: '微软雅黑', '华文宋体', tahoma, verdana, helvetica;
+    border: 1px solid #0000FF;
+}
+
+.round {
+    -webkit-border-radius: 5%;
+    -moz-border-radius: 5%;
+    border-radius: 5%;
+}
+
+.mycircle {
+    -webkit-border-radius: 100%;
+    -moz-border-radius: 100%;
+    border-radius: 100%;
+}
+
+.ground {
+    -webkit-border-radius: 60px;
+    -moz-border-radius: 60px;
+    border-radius: 60px;
+}
+
+.mycircle .icon {
+    word-wrap: break-word;
+    padding: 0 1%;
+}
+
+.mybtn.blue {
+    background-color: #3797ff;
+    color: white;
+    border: #3797ff;
+}
+
+.mybtn.red {
+    background-color: #e62014;
+    color: white;
+    border: #e62014;
+}
+
+.mybtn.lightred {
+    background-color: #e6ada2;
+    color: white;
+    border: #e6ada2;
+}
+
+.mybtn.green {
+    background-color: #3BBF67;
+    color: white;
+    border: #3BBF67;
+}
+
+.mybtn.lightgreen {
+    background-color: #cbf5e6;
+    color: white;
+    border: #cbf5e6;
+}
+
+.mybtn.yellow {
+    background-color: #d1e66d;
+    border: #d1e66d;
+}
+
+.mybtn.purple {
+    background-color: #8353e6;
+    color: white;
+    border: #8353e6;
+}
+
+.mybtn.lightpurple {
+    background-color: #c2b1e6;
+    color: white;
+    border: #c2b1e6;
+}
+
+.mybtn.black {
+    background-color: #000000;
+    color: white;
+    border: #000000;
+}
+
+.mybtn.white {
+    background-color: #ffffff;
+    color: black;
+    border: none;
+}
+
+body {
+    margin: 40px 10px;
+    padding: 0;
+    font-family: "Lucida Grande", Helvetica, Arial, Verdana, sans-serif;
+    font-size: 14px;
+}
+
+#calendar {
+    /*max-width: 1400px;*/
+    margin: 0 auto;
+}
+
+#wrap {
+    width: auto;
+    margin: 0 auto;
+}
+
+#external-events {
+    /*float: left;*/
+    /*width: 80%;*/
+    padding: 0 10px;
+    border: 1px solid #ccc;
+    background: #FFF;
+    text-align: left;
+    line-height: 24pt;
+}
+
+#external-events h4 {
+    font-size: 16px;
+    margin-top: 0;
+    padding-top: 1em;
+}
+
+#external-events .fc-event {
+    margin: 10px 0;
+    cursor: pointer;
+    padding: 3px;
+    background-color: #c2b1e6;
+}
+
+#external-events p {
+    margin: 1.5em 0;
+    font-size: 11px;
+    color: #ffa643;
+}
+
+#external-events p input {
+    margin: 0;
+    vertical-align: middle;
+}
+
+#calendar_header {
+}
+
+#calendar {
+    float: left;
+}
+
+#calendar_right {
+    float: right;
+}
+
+#mybtnlist {
+    -webkit-display:inline-flex;
+    display: inline-flex;
+    list-style: none;
+    position: relative;
+    top: 10%;
+    left: -2%;
+}
+
+#mybtnlist li {
+    padding: 0;
+    display:inline-block;
+}
+
+#mybtnlist li button {
+    margin: 0px;
+}
+
+#mybtnlist li button.active {
+    -webkit-transform: scale(1.2);
+    -moz-transform: scale(1.2);
+    -ms-transform: scale(1.2);
+    -o-transform: scale(1.2);
+    transform: scale(1.2);
+    outline-style: none;
+}
+
+.clear {
+    clear: both;
+}
+
+.group {
+    border: 1px solid gray;
+    border-left: 2px solid #2023ff;
+}
+
+form {
+    padding: 5px;
+}
+
+form input.form-control {
+    width: 78%;
+    border-radius: 0;
+}
+
+form textarea.form-control {
+    width: 78%;
+    border-radius: 0;
+}
+
+form select {
+    width: 80%;
+    border-radius: 0;
+}
+
+textarea, input[type="text"], input[type="password"], input[type="datetime"], input[type="datetime-local"], input[type="date"], input[type="month"], input[type="time"], input[type="week"], input[type="number"], input[type="email"], input[type="url"], input[type="search"], input[type="tel"], input[type="color"], .uneditable-input {
+    -webkit-box-shadow: none;
+    -moz-box-shadow: none;
+    box-shadow: none;
+    -webkit-transition: none;
+    -moz-transition: none;
+    -o-transition: none;
+    transition: none;
+    -webkit-border-radius: 0;
+    -moz-border-radius: 0;
+    border-radius: 0;
+}
+
+#datetime1, detetime2, datetime3 {
+    margin-bottom: 2px;
+
+}
+
+.divCheckBoxNoSel {
+    background: url("./images/checkboxNoSel.jpg") no-repeat center center;
+    float: left;
+    width: 15px;
+    height: 15px;
+    border: 1px solid #BDBDBD;
+    color: #FFF;
+}
+
+.divCheckBoxSel {
+    background: url("./images/checkboxSel.jpg") no-repeat center center;
+    float: left;
+    width: 15px;
+    height: 15px;
+    border: 1px solid #BDBDBD;
+    color: #FFF;
+}
+
+input.error {
+    border: 1px solid red;
+}
+
+textarea.error {
+    border: 1px solid red;
+}
+
+label.error {
+    padding-left: 16px;
+    padding-bottom: 2px;
+    font-weight: bold;
+    color: #EA5200;
+}
+
+.layui-layer-btn1.remove {
+    border-color: red;
+    background-color: red;
+    color: white;
+}
+
+#fix_btn {
+    position: absolute;
+    top: 90px;
+    right: 22px;
+    width: 40px;
+    height: 500px;
+}
+
+#fix_btn > button {
+    display: block;
+    width: 40px;
+    height: 40px;
+    padding: 5px;
+    font-size: 24px;
+    line-height: 24px;
+    color: white;
+    background-color: #2e8ded;
+    margin-bottom: 5px;
+    border: none;
+}
